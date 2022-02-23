@@ -5,8 +5,8 @@ This is a continuation of [this week's project](https://github.com/daltonjmcgee/
 I did a little more work on it by building the portfolio for [Executive Producer Jen McKenzie](https://jenmckenzie.com). This app is currently running that website as well via an nginx proxy.
 
 The plan is two-fold:
-- to make the structure better, more extensible and installable using go modules.
-- to add an Admin Panel to update the `noSQL.json` file.
+- to make the directory structure better, more extensible and installable using go modules.
+- to add an optional Admin Panel to update the `noSQL.json` file via the web. My biggest concern with that is authentication. I'd LOVE to get away with not using any SQL database, but I don't know how secure that is.
 
 ### Technologies
 
