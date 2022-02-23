@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+var config map[string]string = returnConfig()
+
 func loadFile(fileName string) (string, error) {
 	bytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -60,7 +62,11 @@ func handle500(w http.ResponseWriter) {
 }
 
 func handleUri(w http.ResponseWriter, r *http.Request) {
-	templateHome := "../templates/home.html"
+	var templates []string
+	templateFiles, _ := ioutil.ReadDir("../templates")
+	for _, file := range templateFiles {
+		templates = append(templates, fmt.Sprintf("../templates/%s", file.Name()))
+	}
 
 	if r.Method != "GET" {
 		handle405(w, r.Method)
@@ -78,14 +84,25 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if path == "/" {
-		files := append([]string{"../public/index.html"}, templateHome)
+		jsonBytes, err := loadFile(config["databasePath"])
+
+		if err != nil {
+			// This should probably throw a different error
+			fmt.Fprintf(w, config["databasePath"])
+			return
+		}
+
+		jsonMap := map[string][]interface{}{}
+		json.Unmarshal([]byte(jsonBytes), &jsonMap)
+
+		files := append([]string{"../public/index.html"}, templates...)
 		t, err := template.ParseFiles(files...)
 		if err != nil {
 			handle500(w)
 		}
-		t.Execute(w, err)
+		t.Execute(w, jsonMap)
 	} else {
-		files := append([]string{fmt.Sprintf("../public%s.html", path)}, templateHome)
+		files := append([]string{fmt.Sprintf("../public%s.html", path)}, templates...)
 		t, err := template.ParseFiles(files...)
 
 		if err == nil {
@@ -121,7 +138,7 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				jsonBytes, err := loadFile("./noSQL.json")
+				jsonBytes, err := loadFile("../noSQL.json")
 
 				if err != nil {
 					// This should probably throw a different error
@@ -138,9 +155,14 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 					for key, value := range val.(map[string]interface{}) {
 						if key == queryKey && *queryableValue == value {
 							fullDirectory := fmt.Sprintf("../public%s/%s", directory, file.Name())
-							files := append([]string{fullDirectory}, templateHome)
-							t, _ := template.ParseFiles(files...)
-							t.Execute(w, val)
+							files := append([]string{fullDirectory}, templates...)
+							t, err := template.ParseFiles(files...)
+							if err != nil {
+								fmt.Println(err)
+								handle500(w)
+							} else {
+								t.Execute(w, val)
+							}
 							return
 						}
 					}
@@ -150,7 +172,6 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	return
 }
 
 func handleStatic(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +190,6 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 func doNothing(w http.ResponseWriter, r *http.Request) {}
 
 func main() {
-	config, _ := returnConfig()
 	http.HandleFunc("/", handleUri)
 	http.HandleFunc("/static/", handleStatic)
 	http.HandleFunc("/favicon.ico", doNothing)

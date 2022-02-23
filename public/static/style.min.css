@@ -1,0 +1,1 @@
+*,*:before,*:after{-webkit-box-sizing:border-box;box-sizing:border-box}html,body{height:-webkit-min-content;height:-moz-min-content;height:min-content;overflow:hidden;height:100vh;position:relative;margin:0;font-size:16px;background-color:var(--background-color);color:var(--title-color)}
