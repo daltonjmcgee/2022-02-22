@@ -1,5 +1,6 @@
-{{ template "layout" . }}
+{{ template "home" . }}
 {{ block "title" nil }}Homepage{{ end }}
 {{ block "content" nil }}
 <h1>Hello Multiverse!</h1>
+<p>{{ . }}</p>
 {{ end }}

@@ -22,50 +22,11 @@ func loadFile(fileName string) (string, error) {
 	}
 }
 
-func handleDynamic(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	if path != "/static/" {
-		http.ServeFile(w, r, "../public"+path)
-	} else {
-		http.NotFound(w, r)
-	}
-}
-
-func handle404(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNotFound)
-	file, err := loadFile("../public/404.html")
-	if err != nil {
-		fmt.Fprintf(w, "Some dipshit deleted the default 404 and didn't replace it. At any rate, your page wasn't found.")
-	} else {
-		fmt.Fprintf(w, file)
-	}
-}
-
-func handle405(w http.ResponseWriter, method string) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
-	data, _ := json.Marshal(map[string]string{
-		"message": method + " is not allowed on this endpoint. Try something else.",
-		"status":  "405",
-	})
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-}
-
-func handle500(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusInternalServerError)
-	file, err := loadFile("../public/500.html")
-	if err != nil {
-		fmt.Fprintf(w, "Some dipshit deleted the default 404 and didn't replace it. At any rate, there was a server error. Try again later.")
-	} else {
-		fmt.Fprintf(w, file)
-	}
-}
-
 func handleUri(w http.ResponseWriter, r *http.Request) {
 	var templates []string
-	templateFiles, _ := ioutil.ReadDir("../templates")
+	templateFiles, _ := ioutil.ReadDir(config["templatesPath"])
 	for _, file := range templateFiles {
-		templates = append(templates, fmt.Sprintf("../templates/%s", file.Name()))
+		templates = append(templates, config["templatesPath"]+fmt.Sprintf("/%s", file.Name()))
 	}
 
 	if r.Method != "GET" {
@@ -95,14 +56,14 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 		jsonMap := map[string][]interface{}{}
 		json.Unmarshal([]byte(jsonBytes), &jsonMap)
 
-		files := append([]string{"../public/index.html"}, templates...)
+		files := append([]string{config["publicPath"] + "/index.html"}, templates...)
 		t, err := template.ParseFiles(files...)
 		if err != nil {
 			handle500(w)
 		}
 		t.Execute(w, jsonMap)
 	} else {
-		files := append([]string{fmt.Sprintf("../public%s.html", path)}, templates...)
+		files := append([]string{config["publicPath"] + fmt.Sprintf("%s.html", path)}, templates...)
 		t, err := template.ParseFiles(files...)
 
 		if err == nil {
@@ -115,7 +76,7 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 			fileName := strings.Split(path, "/")
 			queryableValue := &fileName[len(fileName)-1]
 			directory := strings.Join(fileName[:len(fileName)-1], "/")
-			directoryFiles, err := ioutil.ReadDir(fmt.Sprintf("../public/%s", directory))
+			directoryFiles, err := ioutil.ReadDir(config["publicPath"] + fmt.Sprintf("/%s", directory))
 
 			if err != nil {
 				handle404(w)
@@ -138,7 +99,7 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				jsonBytes, err := loadFile("../noSQL.json")
+				jsonBytes, err := loadFile(config["databasePath"])
 
 				if err != nil {
 					// This should probably throw a different error
@@ -154,7 +115,7 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 				for _, val := range jsonMap["data"] {
 					for key, value := range val.(map[string]interface{}) {
 						if key == queryKey && *queryableValue == value {
-							fullDirectory := fmt.Sprintf("../public%s/%s", directory, file.Name())
+							fullDirectory := config["publicPath"] + fmt.Sprintf("%s/%s", directory, file.Name())
 							files := append([]string{fullDirectory}, templates...)
 							t, err := template.ParseFiles(files...)
 							if err != nil {
@@ -181,7 +142,7 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 	}
 	path := r.URL.Path
 	if path != "/static/" {
-		http.ServeFile(w, r, "../public"+path)
+		http.ServeFile(w, r, config["publicPath"]+path)
 	} else {
 		handle404(w)
 	}

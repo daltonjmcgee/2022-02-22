@@ -1,5 +1,0 @@
-{
-  "port": "3010",
-  "url": "localhost",
-  "databasePath": "../noSQL.json"
-}

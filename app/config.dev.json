@@ -1,0 +1,7 @@
+{
+  "port": "3010",
+  "url": "localhost",
+  "databasePath": "./noSQL.json",
+  "publicPath": "../web/public",
+  "templatesPath": "../web/templates"
+}
