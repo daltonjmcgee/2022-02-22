@@ -3,6 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"goserve/admin"
+	"goserve/config"
+	"goserve/helpers"
+	"goserve/httpErrorHandler"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -11,26 +15,17 @@ import (
 	"strings"
 )
 
-var config map[string]string = returnConfig()
-
-func loadFile(fileName string) (string, error) {
-	bytes, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return "File not found", err
-	} else {
-		return string(bytes), err
-	}
-}
+var conf map[string]string = config.ReturnConfig()
 
 func handleUri(w http.ResponseWriter, r *http.Request) {
 	var templates []string
-	templateFiles, _ := ioutil.ReadDir(config["templatesPath"])
+	templateFiles, _ := ioutil.ReadDir(conf["templatesPath"])
 	for _, file := range templateFiles {
-		templates = append(templates, config["templatesPath"]+fmt.Sprintf("/%s", file.Name()))
+		templates = append(templates, conf["templatesPath"]+fmt.Sprintf("/%s", file.Name()))
 	}
 
 	if r.Method != "GET" {
-		handle405(w, r.Method)
+		httpErrorHandler.Handle405(w, r.Method)
 		return
 	}
 
@@ -40,30 +35,30 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 	// We don't want anyone grabbing that un-rendered page.
 	matched, _ := regexp.Match(`\[\w+\]`, []byte(path))
 	if matched {
-		handle404(w)
+		httpErrorHandler.Handle404(w)
 		return
 	}
 
 	if path == "/" {
-		jsonBytes, err := loadFile(config["databasePath"])
+		jsonBytes, err := helpers.LoadFile(conf["databasePath"])
 
 		if err != nil {
 			// This should probably throw a different error
-			fmt.Fprintf(w, config["databasePath"])
+			fmt.Fprintf(w, conf["databasePath"])
 			return
 		}
 
 		jsonMap := map[string][]interface{}{}
 		json.Unmarshal([]byte(jsonBytes), &jsonMap)
 
-		files := append([]string{config["publicPath"] + "/index.html"}, templates...)
+		files := append([]string{conf["publicPath"] + "/index.html"}, templates...)
 		t, err := template.ParseFiles(files...)
 		if err != nil {
-			handle500(w)
+			httpErrorHandler.Handle500(w)
 		}
 		t.Execute(w, jsonMap)
 	} else {
-		files := append([]string{config["publicPath"] + fmt.Sprintf("%s.html", path)}, templates...)
+		files := append([]string{conf["publicPath"] + fmt.Sprintf("%s.html", path)}, templates...)
 		t, err := template.ParseFiles(files...)
 
 		if err == nil {
@@ -76,10 +71,10 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 			fileName := strings.Split(path, "/")
 			queryableValue := &fileName[len(fileName)-1]
 			directory := strings.Join(fileName[:len(fileName)-1], "/")
-			directoryFiles, err := ioutil.ReadDir(config["publicPath"] + fmt.Sprintf("/%s", directory))
+			directoryFiles, err := ioutil.ReadDir(conf["publicPath"] + fmt.Sprintf("/%s", directory))
 
 			if err != nil {
-				handle404(w)
+				httpErrorHandler.Handle404(w)
 				return
 			}
 
@@ -99,11 +94,11 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				jsonBytes, err := loadFile(config["databasePath"])
+				jsonBytes, err := helpers.LoadFile(conf["databasePath"])
 
 				if err != nil {
 					// This should probably throw a different error
-					handle404(w)
+					httpErrorHandler.Handle404(w)
 					return
 				}
 
@@ -115,12 +110,12 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 				for _, val := range jsonMap["data"] {
 					for key, value := range val.(map[string]interface{}) {
 						if key == queryKey && *queryableValue == value {
-							fullDirectory := config["publicPath"] + fmt.Sprintf("%s/%s", directory, file.Name())
+							fullDirectory := conf["publicPath"] + fmt.Sprintf("%s/%s", directory, file.Name())
 							files := append([]string{fullDirectory}, templates...)
 							t, err := template.ParseFiles(files...)
 							if err != nil {
 								fmt.Println(err)
-								handle500(w)
+								httpErrorHandler.Handle500(w)
 							} else {
 								t.Execute(w, val)
 							}
@@ -129,7 +124,7 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			handle404(w)
+			httpErrorHandler.Handle404(w)
 			return
 		}
 	}
@@ -137,22 +132,23 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 
 func handleStatic(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		handle405(w, r.Method)
+		httpErrorHandler.Handle405(w, r.Method)
 		return
 	}
 	path := r.URL.Path
 	if path != "/static/" {
-		http.ServeFile(w, r, config["publicPath"]+path)
+		http.ServeFile(w, r, conf["publicPath"]+path)
 	} else {
-		handle404(w)
+		httpErrorHandler.Handle404(w)
 	}
 }
 
 func doNothing(w http.ResponseWriter, r *http.Request) {}
 
 func main() {
+	admin.AdminPanel()
 	http.HandleFunc("/", handleUri)
 	http.HandleFunc("/static/", handleStatic)
 	http.HandleFunc("/favicon.ico", doNothing)
-	log.Fatal(http.ListenAndServe(":"+config["port"], nil))
+	log.Fatal(http.ListenAndServe(":"+conf["port"], nil))
 }

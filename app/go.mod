@@ -1,3 +1,3 @@
-module main
+module goserve
 
 go 1.17
