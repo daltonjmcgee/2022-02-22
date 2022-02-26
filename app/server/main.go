@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"goserve/admin"
 	"goserve/config"
 	"goserve/helpers"
 	"goserve/httpErrorHandler"
@@ -146,7 +145,6 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 func doNothing(w http.ResponseWriter, r *http.Request) {}
 
 func CreateServer() {
-	admin.AdminPanel()
 	http.HandleFunc("/", handleUri)
 	http.HandleFunc("/static/", handleStatic)
 	http.HandleFunc("/favicon.ico", doNothing)

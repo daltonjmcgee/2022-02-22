@@ -1,0 +1,13 @@
+header {
+  text-align: center;
+}
+
+main {
+  height: 100vh;
+  width: 100vw;
+}
+
+form {
+  width: fit-content;
+  margin-inline: auto;
+}
