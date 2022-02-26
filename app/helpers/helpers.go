@@ -1,6 +1,8 @@
 package helpers
 
-import "io/ioutil"
+import (
+	"io/ioutil"
+)
 
 func LoadFile(fileName string) (string, error) {
 	bytes, err := ioutil.ReadFile(fileName)

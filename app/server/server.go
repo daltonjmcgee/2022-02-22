@@ -16,16 +16,21 @@ import (
 
 var conf map[string]string = config.ReturnConfig()
 
-func handleUri(w http.ResponseWriter, r *http.Request) {
+func methodCheck(w http.ResponseWriter, r *http.Request, method string) {
+	if r.Method != method {
+		httpErrorHandler.Handle405(w, method)
+		return
+	}
+}
+
+func handleGet(w http.ResponseWriter, r *http.Request) {
+
+	methodCheck(w, r, "GET")
+
 	var templates []string
 	templateFiles, _ := ioutil.ReadDir(conf["templatesPath"])
 	for _, file := range templateFiles {
 		templates = append(templates, conf["templatesPath"]+fmt.Sprintf("/%s", file.Name()))
-	}
-
-	if r.Method != "GET" {
-		httpErrorHandler.Handle405(w, r.Method)
-		return
 	}
 
 	path := r.URL.Path
@@ -57,7 +62,7 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 		}
 		t.Execute(w, jsonMap)
 	} else {
-		files := append([]string{conf["publicPath"] + fmt.Sprintf("%s.html", path)}, templates...)
+		files := append([]string{conf["publicPath"] + path + ".html"}, templates...)
 		t, err := template.ParseFiles(files...)
 
 		if err == nil {
@@ -130,10 +135,8 @@ func handleUri(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleStatic(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		httpErrorHandler.Handle405(w, r.Method)
-		return
-	}
+	methodCheck(w, r, "GET")
+
 	path := r.URL.Path
 	if path != "/static/" {
 		http.ServeFile(w, r, conf["publicPath"]+path)
@@ -145,7 +148,7 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 func doNothing(w http.ResponseWriter, r *http.Request) {}
 
 func CreateServer() {
-	http.HandleFunc("/", handleUri)
+	http.HandleFunc("/", handleGet)
 	http.HandleFunc("/static/", handleStatic)
 	http.HandleFunc("/favicon.ico", doNothing)
 	log.Fatal(http.ListenAndServe(":"+conf["port"], nil))

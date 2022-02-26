@@ -7,9 +7,11 @@ import (
 	"net/http"
 )
 
-func handleAdmin(w http.ResponseWriter, r *http.Request) {
+var adminPath string = "./admin/public/"
+
+func handleGet(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
-	file, err := helpers.LoadFile("./admin/public/" + path[1:] + ".html")
+	file, err := helpers.LoadFile(adminPath + path[1:] + ".html")
 
 	if err != nil {
 		httpErrorHandler.Handle404(w)
@@ -19,21 +21,17 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleStatic(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		httpErrorHandler.Handle405(w, r.Method)
-		return
-	}
-
 	path := r.URL.Path
-	if path == "/admin/style.css" {
-		http.ServeFile(w, r, "./admin/public/style.css")
+	fmt.Println(path)
+	if path != "/admin/static/" {
+		http.ServeFile(w, r, adminPath+path)
 	} else {
 		httpErrorHandler.Handle404(w)
 	}
 }
 
 func AdminPanel() {
-	http.HandleFunc("/admin", handleAdmin)
-	http.HandleFunc("/admin/", handleAdmin)
-	http.HandleFunc("/admin/style.css", handleStatic)
+	http.HandleFunc("/admin", handleGet)
+	http.HandleFunc("/admin/", handleGet)
+	http.HandleFunc("/admin/static/", handleStatic)
 }
